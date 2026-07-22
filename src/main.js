@@ -57,8 +57,6 @@ if (!gotTheLock) {
   /** 6시간 주기 업데이트 확인 타이머 (중복 등록 방지·종료 시 정리) */
   let updateCheckTimer = null;
   let alertIconShown = false;
-  /** X(트레이 숨김) 시각 — 이 경로로 숨었을 때만 재표시 새로고침 대상 (null = 해당 없음) */
-  let hiddenByCloseAt = null;
   /** @type {BrowserWindow|null} 자체 알림 배너 창(재사용 단일 인스턴스) */
   let bannerWindow = null;
   /** @type {Promise<void>|null} 배너 html 로드 완료 대기용 */
@@ -129,13 +127,10 @@ if (!gotTheLock) {
       if (forceShow || !process.argv.includes("--hidden")) mainWindow.show();
     });
 
-    // X(닫기) = 종료가 아니라 트레이로 숨김.
-    // 이 경로로 숨은 시각만 기록 — 최소화/복원 등 다른 경로와 구분해
-    // "X 로 숨겼다 다시 연" 경우에만 오래된 화면 새로고침을 검토한다.
+    // X(닫기) = 종료가 아니라 트레이로 숨김
     mainWindow.on("close", (event) => {
       if (!isQuitting) {
         event.preventDefault();
-        hiddenByCloseAt = Date.now();
         mainWindow.hide();
       }
     });
@@ -143,9 +138,8 @@ if (!gotTheLock) {
     // 창을 열어 보면 새 알림 표시 해제("창을 열면 해제" 확정 설계)
     mainWindow.on("focus", stopAlertBlink);
     mainWindow.on("show", stopAlertBlink);
-    mainWindow.on("show", () => {
-      void maybeReloadStale();
-    });
+    // 숨김/최소화 후 낡은 화면 문제는 웹(v3)의 DesktopRefresher 가 해결한다 —
+    // 창이 다시 보이면 데이터만 조용히 갱신(입력 보존). exe 쪽 통째 reload 는 제거(v1.0.3).
 
     setupWindowOpenPolicy(mainWindow);
     attachMainNavGuard(mainWindow);
@@ -154,31 +148,6 @@ if (!gotTheLock) {
     // 채널 첨부·hwpx 내보내기가 기본 동작으로 저장된다. 핸들러 등록 안 함.
 
     mainWindow.loadURL(BASE_URL);
-  }
-
-  /**
-   * X 로 1분 이상 숨겨져 있던 창을 다시 열면 새로고침해, 그 사이 올라온
-   * 공지·채널 글이 보이게 한다. 단 화면에 입력하다 만 내용(글 작성 중 X 를
-   * 누른 경우 등)이 있으면 날아가지 않도록 새로고침을 건너뛴다.
-   */
-  async function maybeReloadStale() {
-    if (hiddenByCloseAt === null) return;
-    const stale = Date.now() - hiddenByCloseAt > 60 * 1000;
-    hiddenByCloseAt = null;
-    if (!stale || mainWindow === null || mainWindow.isDestroyed()) return;
-    let dirty = true; // 판정 실패 시 보수적으로 새로고침하지 않는다
-    try {
-      dirty = await mainWindow.webContents.executeJavaScript(
-        `Array.from(document.querySelectorAll('textarea, input[type="text"], input:not([type])'))
-           .some((el) => typeof el.value === "string" && el.value.trim() !== "")`,
-        true
-      );
-    } catch (_err) {
-      /* dirty = true 유지 */
-    }
-    if (dirty !== true && mainWindow !== null && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.reload();
-    }
   }
 
   /** 외부 브라우저 열기 — http/https 만 허용(그 외 프로토콜은 무시). */
@@ -294,7 +263,6 @@ if (!gotTheLock) {
 
   /** 알림 클릭 등에서 창 복원 + 사이트 내 경로 이동 */
   function openPath(sitePath) {
-    hiddenByCloseAt = null; // 어차피 아래 loadURL 로 새로 이동 — 이중 새로고침 방지
     showMainWindow();
     if (mainWindow !== null && !mainWindow.isDestroyed()) {
       mainWindow.loadURL(BASE_URL + sitePath);

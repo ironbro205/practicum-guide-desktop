@@ -114,3 +114,9 @@ practicum-guide-desktop/
 - 내용은 IPC "pg:banner-data" 로 전달해 textContent 로만 삽입(innerHTML 금지), 본문 클릭="pg:banner-click"(onClick+숨김), ×="pg:banner-close"(숨김만), 7초 자동 숨김, 표시 중 새 알림=내용 교체+타이머 리셋.
 - 알림 경로 통일: poller 는 startPolling opts.notify 주입(전 알림 배너로), main 의 업데이트 준비·알림 테스트·개발모드 안내도 전부 showBanner. onNewAlert(트레이 깜빡임)는 그대로.
 - 숨김 60초 초과 후 재표시 시 webContents.reload(그 사이 새 글 반영) — 같은 릴리스에 포함. INSTALL.md §8 은 "윈도우 설정과 무관하게 항상 뜸"으로 재작성.
+
+## 15. v1.0.3 변경 (통째 reload 제거 — 웹 DesktopRefresher 로 대체)
+- v3 에 DesktopRefresher(exe 전용, 창 복귀 시+5분 주기 router.refresh, 55초 스로틀) 배포됨
+  → 데이터만 조용히 갱신·입력 보존이라 exe 쪽 "숨김 후 재표시 통째 reload"(§14 마지막 항목)는
+  열등한 중복이 되어 전부 제거(maybeReloadStale·hiddenByCloseAt·관련 핸들러).
+- 코드 변경은 순수 삭제뿐. 이 릴리스는 사용자의 자동 업데이트 실전 검증(v1.0.2 → 1.0.3)도 겸한다.
