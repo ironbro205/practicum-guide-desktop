@@ -21,7 +21,7 @@ const VERSION_ARG_PREFIX = "--pg-app-version=";
 const versionArg = process.argv.find((a) => a.startsWith(VERSION_ARG_PREFIX));
 
 contextBridge.exposeInMainWorld("practicumDesktop", {
-  version: versionArg ? versionArg.slice(VERSION_ARG_PREFIX.length) : "1.0.0",
+  version: versionArg ? versionArg.slice(VERSION_ARG_PREFIX.length) : "1.0.1",
   getSettings: () => ipcRenderer.invoke("pg:get-settings"),
   setAutoLaunch: (enabled) =>
     ipcRenderer.invoke("pg:set-auto-launch", enabled === true),

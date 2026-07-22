@@ -30,6 +30,19 @@
   같은 태그에 릴리스 2개 생성(blockmap 분리) → 수동 병합(자산 3종 확인).
   재발 방지로 release.yml 에 pre-create release 스텝 추가.
 
+## 2026-07-22 — v1.0.1 (통합 폴링 + 알림 시각 표시, PLAN §13)
+- poller.js: 3개 호출 → `GET /api/my/desktop-activity` 1회로 통합, 간격 60초
+  (첫 주기는 시작 30초 후). 401 = 미로그인 streak(3회 → 재로그인 알림 1회),
+  기준값 비교·첫 관측 억제·쿠키 수동 폴백·refreshBaselines 유지. runOnce 노출.
+  새 글 알림 시 onNewAlert 콜백(주입) 호출.
+- main.js: 새 알림 시 트레이 아이콘 800ms 교대 깜빡임(icon-alert.ico)+툴팁 변경
+  +flashFrame, 창 focus/show 로 해제. 트레이 메뉴 "지금 확인"/"알림 테스트" 추가.
+- assets/icon-alert.ico: 기존 SVG + 우상단 빨간 원 배지, 256/48/32/16 (스크래치패드
+  iconbuild 파이프라인 재사용 — 프로젝트에 빌드 의존성 추가 없음).
+- package.json 1.0.1, CLAUDE.md 절대 규칙 3 갱신, INSTALL.md "문제 해결" 절 추가.
+- 검증: node --check src/*.js 통과, ico 멀티사이즈 4종·기존과 내용 상이 확인.
+- ⚠️ 릴리스(태그 v1.0.1)는 서버(v3) 통합 라우트 배포 후에 — 커밋은 아직 안 함.
+
 ## 남은 일
 - [ ] 사용자 실제 Windows PC 수동 QA (PLAN §11 체크리스트 + 앱설정 스위치 2개·다운로드 버튼 숨김)
 - [ ] QA 통과 후 INSTALL.md 링크를 교사들에게 안내

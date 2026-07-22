@@ -23,6 +23,15 @@ const BASE_URL = "https://practicum-guide.vercel.app";
 const OWN_ORIGIN = new URL(BASE_URL).origin;
 const LOGIN_ARGS = ["--hidden"]; // get/setLoginItemSettings 에 항상 같은 args 사용
 const ICON_PATH = path.join(__dirname, "..", "assets", "icon.ico");
+// 새 알림 표시용 배지 아이콘(기본 아이콘 + 우상단 빨간 원)
+const ALERT_ICON_PATH = path.join(__dirname, "..", "assets", "icon-alert.ico");
+const TRAY_TOOLTIP = "실습가이드";
+const TRAY_TOOLTIP_ALERT = "실습가이드 — 새 알림";
+// 제목 표시줄 통일 규격 — v3 웹의 데스크톱 상단 띠와 반드시 동일 값 유지.
+// TITLEBAR_COLOR = v3 --color-brand(#4a154b, 사이드바 배경), 높이 36px 공통 상수.
+const TITLEBAR_COLOR = "#4a154b";
+const TITLEBAR_SYMBOL_COLOR = "#ffffff";
+const TITLEBAR_HEIGHT = 36;
 
 // ── 단일 인스턴스 락 (파일 최상단) ─────────────────────────────────────
 const gotTheLock = app.requestSingleInstanceLock();
@@ -38,6 +47,11 @@ if (!gotTheLock) {
   /** @type {Tray|null} 모듈 스코프 변수 — GC 로 트레이 아이콘이 사라지는 것 방지 */
   let tray = null;
   let isQuitting = false;
+  /** 새 알림 트레이 깜빡임 타이머 (null = 깜빡이는 중 아님) */
+  let alertBlinkTimer = null;
+  /** 6시간 주기 업데이트 확인 타이머 (중복 등록 방지·종료 시 정리) */
+  let updateCheckTimer = null;
+  let alertIconShown = false;
 
   // 토스트 알림 AUMID — BrowserWindow 생성 전에 설정.
   // 개발 모드는 process.execPath 기준(계획서 §10).
@@ -51,6 +65,10 @@ if (!gotTheLock) {
 
   app.on("before-quit", () => {
     isQuitting = true;
+    if (updateCheckTimer !== null) {
+      clearInterval(updateCheckTimer);
+      updateCheckTimer = null;
+    }
   });
 
   // 트레이 상주 앱 — 창이 다 닫혀도(=숨겨져도) 종료하지 않는다
@@ -66,6 +84,19 @@ if (!gotTheLock) {
       show: false,
       icon: ICON_PATH,
       autoHideMenuBar: true,
+      // Windows 전용: 기본 제목 표시줄을 숨기고 오버레이 버튼만 남겨
+      // v3 웹의 상단 브랜드 띠(#4a154b, 36px)와 색·높이를 통일한다.
+      // 비 Windows(개발 WSLg 등)는 기본 프레임 유지.
+      ...(process.platform === "win32"
+        ? {
+            titleBarStyle: "hidden",
+            titleBarOverlay: {
+              color: TITLEBAR_COLOR,
+              symbolColor: TITLEBAR_SYMBOL_COLOR,
+              height: TITLEBAR_HEIGHT,
+            },
+          }
+        : {}),
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -90,6 +121,10 @@ if (!gotTheLock) {
         mainWindow.hide();
       }
     });
+
+    // 창을 열어 보면 새 알림 표시 해제("창을 열면 해제" 확정 설계)
+    mainWindow.on("focus", stopAlertBlink);
+    mainWindow.on("show", stopAlertBlink);
 
     setupWindowOpenPolicy(mainWindow);
     attachMainNavGuard(mainWindow);
@@ -300,6 +335,14 @@ if (!gotTheLock) {
     });
 
     autoUpdater.checkForUpdatesAndNotify().catch(() => {});
+
+    // 트레이 상주 앱이라 몇 주씩 재시작이 없을 수 있다 —
+    // 시작 시 1회만으로는 새 버전을 못 받으므로 6시간마다 자동 확인.
+    if (updateCheckTimer === null) {
+      updateCheckTimer = setInterval(() => {
+        autoUpdater.checkForUpdatesAndNotify().catch(() => {});
+      }, 6 * 60 * 60 * 1000);
+    }
   }
 
   function checkForUpdatesManually() {
@@ -316,10 +359,52 @@ if (!gotTheLock) {
     autoUpdater.checkForUpdatesAndNotify().catch(() => {});
   }
 
+  // ── 새 알림 시각 표시 (v1.0.1) ───────────────────────────────────────
+  // 트레이: 기본 아이콘 ↔ 빨간 점 배지 아이콘을 800ms 간격 교대 + 툴팁 변경.
+  // 작업표시줄: 창이 존재하면 flashFrame (숨김 상태면 버튼이 없어 무해).
+  // 해제는 창 focus/show 에서 stopAlertBlink ("창을 열면 해제" 확정).
+  function startAlertBlink() {
+    if (mainWindow !== null && !mainWindow.isDestroyed()) {
+      mainWindow.flashFrame(true);
+    }
+    if (tray === null || alertBlinkTimer !== null) return; // 이미 깜빡이는 중
+    tray.setToolTip(TRAY_TOOLTIP_ALERT);
+    alertIconShown = true;
+    tray.setImage(ALERT_ICON_PATH);
+    alertBlinkTimer = setInterval(() => {
+      if (tray === null) return;
+      alertIconShown = !alertIconShown;
+      tray.setImage(alertIconShown ? ALERT_ICON_PATH : ICON_PATH);
+    }, 800);
+  }
+
+  function stopAlertBlink() {
+    if (mainWindow !== null && !mainWindow.isDestroyed()) {
+      mainWindow.flashFrame(false);
+    }
+    if (alertBlinkTimer === null) return;
+    clearInterval(alertBlinkTimer);
+    alertBlinkTimer = null;
+    alertIconShown = false;
+    if (tray !== null) {
+      tray.setImage(ICON_PATH);
+      tray.setToolTip(TRAY_TOOLTIP);
+    }
+  }
+
+  /** 트레이 "알림 테스트" — 윈도우 배너 억제(방해 금지 등) 진단용 즉시 토스트. */
+  function showTestNotification() {
+    if (!Notification.isSupported()) return;
+    new Notification({
+      title: "실습가이드 — 알림 테스트",
+      body: "이 알림이 화면에 배너로 보이면 알림 설정이 정상이에요.",
+    }).show();
+  }
+
   // ── 트레이 ───────────────────────────────────────────────────────────
   function createTray() {
     tray = new Tray(ICON_PATH);
-    tray.setToolTip("실습가이드");
+    tray.setToolTip(TRAY_TOOLTIP);
     rebuildTrayMenu();
     tray.on("click", showMainWindow);
   }
@@ -330,6 +415,10 @@ if (!gotTheLock) {
       { label: "열기", click: showMainWindow },
       { label: `버전 v${app.getVersion()}`, enabled: false },
       { type: "separator" },
+      // 즉시 폴링 1주기(알림 끔이면 설계대로 아무것도 안 함)
+      { label: "지금 확인", click: () => poller.runOnce() },
+      // 윈도우가 배너를 억제하는지(방해 금지 등) 바로 확인하는 진단용
+      { label: "알림 테스트", click: showTestNotification },
       { label: "업데이트 확인", click: checkForUpdatesManually },
       {
         label: "부팅 시 자동실행",
@@ -362,7 +451,12 @@ if (!gotTheLock) {
     registerLoginItemOnce();
     initUpdater();
 
-    // 새 글 알림 폴링(5분 간격, 실행 중에만)
-    poller.startPolling({ baseUrl: BASE_URL, openPath });
+    // 새 글 알림 폴링(60초 간격, 통합 엔드포인트 1회 호출, 실행 중에만)
+    // 새 글 감지 시 토스트와 함께 트레이 깜빡임·작업표시줄 flashFrame 시작
+    poller.startPolling({
+      baseUrl: BASE_URL,
+      openPath,
+      onNewAlert: startAlertBlink,
+    });
   });
 }

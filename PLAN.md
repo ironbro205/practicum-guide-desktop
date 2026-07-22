@@ -95,3 +95,15 @@ practicum-guide-desktop/
   다운로드 고정 주소 `…/releases/latest/download/PracticumGuide-Setup.exe`
   (홈 화면 [앱 다운로드] 버튼이 이 주소 사용).
 - ⚠️ 브리지 규격 변경 시 v3 앱설정 페이지와 동시 변경(CLAUDE.md 절대 규칙).
+
+## 13. v1.0.1 변경 (통합 폴링 + 알림 시각 표시)
+- 폴링을 §5 의 3개 호출에서 `GET /api/my/desktop-activity` **1회**로 통합, 간격 5분 → **60초**
+  (INTERVAL_MS). 응답 = { ok, channels:[{id,last_post_at}], notices:{max_id,count} },
+  401 = 미로그인(기존 streak 3회 → 재로그인 알림 1회 로직 그대로). 기준값 비교·첫 관측
+  알림 억제·401 쿠키 수동 폴백·refreshBaselines 전부 유지(호출 대상만 통합 엔드포인트로).
+- 새 글 감지 시 시각 표시: 트레이 아이콘을 icon-alert.ico(빨간 점 배지)와 800ms 교대 깜빡임
+  + 툴팁 "실습가이드 — 새 알림" + 창 존재 시 flashFrame. 해제 = 창 focus/show(열면 해제).
+- 트레이 메뉴 2항목 추가: "지금 확인"(poller.runOnce) / "알림 테스트"(배너 억제 진단용 토스트).
+- assets/icon-alert.ico 신설(기존 SVG + 우상단 빨간 원, 256/48/32/16 멀티사이즈).
+- 구 3개 v3 엔드포인트는 v1.0.0 앱이 아직 쓰므로 삭제 금지(서버는 통합 라우트 신설만).
+- 제목 표시줄 색 통일: Windows 에서만 titleBarStyle:"hidden" + titleBarOverlay(#4a154b/#ffffff/36px, v3 상단 띠와 동일 상수) — 비 Windows 는 기본 프레임 유지.
