@@ -107,3 +107,10 @@ practicum-guide-desktop/
 - assets/icon-alert.ico 신설(기존 SVG + 우상단 빨간 원, 256/48/32/16 멀티사이즈).
 - 구 3개 v3 엔드포인트는 v1.0.0 앱이 아직 쓰므로 삭제 금지(서버는 통합 라우트 신설만).
 - 제목 표시줄 색 통일: Windows 에서만 titleBarStyle:"hidden" + titleBarOverlay(#4a154b/#ffffff/36px, v3 상단 띠와 동일 상수) — 비 Windows 는 기본 프레임 유지.
+
+## 14. v1.0.2 변경 (자체 팝업 배너 — 윈도우 알림 시스템 완전 대체)
+- 윈도우 토스트가 방해 금지·배너 끔 설정에 막혀 사용자가 못 보는 사고 → new Notification 전면 제거, 자체 배너 창으로 전환.
+- src/banner.html + src/banner-preload.js 신설, main.js showBanner(title, body, onClick): 재사용 단일 BrowserWindow(frame:false·transparent·alwaysOnTop·skipTaskbar·focusable:false), 주 모니터 작업영역 우하단(여백 16px, 360×100), showInactive 로 포커스 안 뺏음.
+- 내용은 IPC "pg:banner-data" 로 전달해 textContent 로만 삽입(innerHTML 금지), 본문 클릭="pg:banner-click"(onClick+숨김), ×="pg:banner-close"(숨김만), 7초 자동 숨김, 표시 중 새 알림=내용 교체+타이머 리셋.
+- 알림 경로 통일: poller 는 startPolling opts.notify 주입(전 알림 배너로), main 의 업데이트 준비·알림 테스트·개발모드 안내도 전부 showBanner. onNewAlert(트레이 깜빡임)는 그대로.
+- 숨김 60초 초과 후 재표시 시 webContents.reload(그 사이 새 글 반영) — 같은 릴리스에 포함. INSTALL.md §8 은 "윈도우 설정과 무관하게 항상 뜸"으로 재작성.

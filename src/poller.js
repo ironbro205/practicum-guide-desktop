@@ -22,7 +22,7 @@
  */
 "use strict";
 
-const { net, session, Notification } = require("electron");
+const { net, session } = require("electron");
 const store = require("./store");
 
 const INTERVAL_MS = 60 * 1000; // 60초 (통합 엔드포인트 1회 — 서버 폴링 하한 60초 준수)
@@ -33,7 +33,7 @@ let timer = null;
 let initialTimer = null;
 let notLoggedInStreak = 0;
 let running = false; // 주기 겹침 방지
-/** startPolling 에서 주입되는 { baseUrl, openPath, onNewAlert } */
+/** startPolling 에서 주입되는 { baseUrl, openPath, notify, onNewAlert } */
 let opts = null;
 
 /** 세션 쿠키로 Cookie 헤더 문자열 수동 구성 (폴백용). */
@@ -112,14 +112,21 @@ async function apiGet(baseUrl, apiPath) {
   return { status: res.status, json: await parseJson(res) };
 }
 
+/**
+ * 알림 표시 — main 이 주입한 자체 배너(showBanner)로만 나간다 (v1.0.2).
+ * 윈도우 토스트(electron Notification)는 방해 금지·배너 끔 설정에 막혀
+ * 사용자가 못 보는 사고가 있어 이 파일에서 완전히 제거했다.
+ */
 function notify(title, body, onClick) {
-  if (!Notification.isSupported()) return;
-  const n = new Notification({ title, body });
-  if (onClick) n.on("click", onClick);
-  n.show();
+  if (opts === null || typeof opts.notify !== "function") return;
+  try {
+    opts.notify(title, body, onClick);
+  } catch (_err) {
+    /* 배너 표시 실패가 폴링 주기를 죽이지 않게 */
+  }
 }
 
-/** 새 글 알림 공통 — 토스트 + main 쪽 시각 표시(트레이 깜빡임 등) 콜백. */
+/** 새 글 알림 공통 — 배너 + main 쪽 시각 표시(트레이 깜빡임 등) 콜백. */
 function notifyNewContent(title, body, onClick) {
   notify(title, body, onClick);
   if (opts !== null && typeof opts.onNewAlert === "function") {
@@ -237,6 +244,8 @@ async function runCycle() {
  * @param {object} options
  * @param {string} options.baseUrl  예: https://practicum-guide.vercel.app
  * @param {(path: string) => void} options.openPath  창 복원 + 해당 화면 loadURL
+ * @param {(title: string, body: string, onClick?: () => void) => void} options.notify
+ *        알림 표시 함수(main 의 자체 배너 showBanner 주입 — 윈도우 토스트 미사용)
  * @param {() => void} [options.onNewAlert]  새 글 알림 시 main 쪽 시각 표시 콜백
  */
 function startPolling(options) {

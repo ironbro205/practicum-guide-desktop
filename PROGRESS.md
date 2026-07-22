@@ -49,6 +49,24 @@
 - v3 쪽 동반 변경: /api/my/desktop-activity(30초 캐시), exe 전용 타이틀바 띠(pg-desktop),
   [관리자 설정]+shield, 다운로드 버튼 lg+ 전용, 앱설정 버전 표시.
 
+## 2026-07-22 — v1.0.2 (자체 팝업 배너 + 재표시 자동 새로고침, PLAN §14) — 미커밋
+- 배경: 윈도우 토스트가 방해 금지/배너 설정에 막혀 사용자가 알림을 못 보는 사고
+  → 윈도우 알림 시스템(new Notification) 전면 제거, 자체 배너 창으로 전환.
+- src/banner.html + src/banner-preload.js 신설(로컬 html 만 로드, 브리지 preload 미사용,
+  textContent 삽입만·innerHTML 금지, 카드 클릭/× 는 IPC 로 main 에 전달).
+- main.js: showBanner(title, body, onClick) — 재사용 단일 BrowserWindow(frame:false·
+  transparent·alwaysOnTop·skipTaskbar·focusable:false·show:false), 작업영역 우하단
+  16px 여백 360×100, showInactive(포커스 안 뺏음), 7초 자동 숨김, 표시 중 새 알림은
+  내용 교체+타이머 리셋(최신 우선). IPC "pg:banner-data"/"pg:banner-click"/
+  "pg:banner-close"(sender 검증). 업데이트 준비·알림 테스트·개발모드 안내도 배너로.
+- poller.js: electron Notification 제거 — startPolling opts.notify(=showBanner) 주입,
+  새 글·재로그인 알림 전부 배너 경로. onNewAlert(트레이 깜빡임)는 그대로.
+- 숨김 창 60초 초과 후 재표시 시 webContents.reload(그 사이 새 글 반영) — 같은 릴리스.
+- package.json 1.0.2, INSTALL.md §7·§8 재작성(배너는 윈도우 설정과 무관하게 항상 뜸,
+  방해 금지 안내는 옛 버전 1.0.1 이하만 해당), PLAN.md §14 추가.
+- 검증: node --check src/*.js 전부 통과. 실기동 QA(배너 표시·클릭 이동·×·자동 숨김)는
+  사용자 Windows PC 에서.
+
 ## 남은 일
 - [ ] 사용자 실제 Windows PC 수동 QA — v1.0.1 자동 업데이트 확인부터
       (PLAN §11 + 타이틀바 색·트레이 깜빡임·지금 확인·알림 테스트·앱설정 스위치·버전 표시)

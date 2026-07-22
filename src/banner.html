@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>실습가이드 알림</title>
+  <style>
+    /* 투명 프레임리스 창 — 카드 바깥은 완전 투명(둥근 모서리·그림자 여백) */
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #card {
+      position: absolute;
+      inset: 8px; /* 그림자가 잘리지 않게 창 가장자리 여백 확보 */
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-left: 4px solid #4a154b; /* v3 브랜드 색 띠 */
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+      box-sizing: border-box;
+      padding: 12px 34px 12px 14px;
+      cursor: pointer;
+      font-family: "Malgun Gothic", "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+    #title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1d1c1d;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+    #body {
+      font-size: 13px;
+      color: #454245;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    #close {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #8a8a8a;
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+    }
+    #close:hover {
+      background: #efefef;
+      color: #333333;
+    }
+  </style>
+</head>
+<body>
+  <div id="card">
+    <div id="title"></div>
+    <div id="body"></div>
+    <button id="close" type="button" aria-label="닫기">&#10005;</button>
+  </div>
+</body>
+</html>
