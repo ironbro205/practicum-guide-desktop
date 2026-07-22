@@ -32,7 +32,7 @@
     "nsis": {
       "oneClick": true,
       "perMachine": false,
-      "artifactName": "PracticumGuide-Setup-${version}.${ext}"
+      "artifactName": "PracticumGuide-Setup.${ext}"
     },
     "publish": {
       "provider": "github",

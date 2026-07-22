@@ -215,6 +215,9 @@ async function checkNotices(baseUrl, openPath) {
 /** 한 주기 실행. 모든 오류는 조용히 삼킨다. */
 async function runCycle(baseUrl, openPath) {
   if (running) return;
+  // 알림 끔(웹 앱설정) — 아무 요청도 하지 않고 리턴.
+  // 모든 알림·서버 확인 중단(재로그인 안내 포함 전부).
+  if (store.get().notificationsEnabled === false) return;
   running = true;
   try {
     const loggedIn = await checkLoggedIn(baseUrl, openPath);
@@ -253,4 +256,36 @@ function stopPolling() {
   }
 }
 
-module.exports = { startPolling, stopPolling };
+/**
+ * 알림 재개 직전 호출 — 알림 없이 기준값만 최신으로 갱신해,
+ * 꺼둔 사이 올라온 글들이 재개 순간 뒤늦게 알림으로 튀는 것을 막는다.
+ * (알림 끔 = 서버 확인도 끔이 확정 설계라, 재개 시점 이후의 새 글만 알린다.)
+ * 실패는 조용히 무시 — 최악의 경우 재개 직후 묵은 글 알림이 최대 2건 올 뿐.
+ */
+async function refreshBaselines(baseUrl) {
+  try {
+    const ch = await apiGet(baseUrl, "/api/channels/activity");
+    if (ch.status === 200 && ch.json !== null && ch.json.ok === true) {
+      const channels = Array.isArray(ch.json.channels) ? ch.json.channels : [];
+      const lastSeen = { ...store.get().lastSeenByChannel };
+      for (const c of channels) {
+        if (!c || c.id == null) continue;
+        lastSeen[String(c.id)] = c.last_post_at ?? null;
+      }
+      store.set({ lastSeenByChannel: lastSeen });
+    }
+    const no = await apiGet(baseUrl, "/api/my/notices-activity");
+    if (
+      no.status === 200 &&
+      no.json !== null &&
+      no.json.ok === true &&
+      typeof no.json.max_id === "number"
+    ) {
+      store.set({ lastNoticeMaxId: no.json.max_id });
+    }
+  } catch (_err) {
+    /* 네트워크 오류 등 — 조용히 무시 */
+  }
+}
+
+module.exports = { startPolling, stopPolling, refreshBaselines };

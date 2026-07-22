@@ -79,3 +79,19 @@ practicum-guide-desktop/
 - [ ] 다운로드: 채널 첨부·hwpx 내보내기 저장, 외부 링크는 기본 브라우저로 열림, 구글 시트 내보내기 정상
 - [ ] 자동실행: 재부팅 → 트레이만으로 시작(창 숨김), 메뉴에서 끄면 재부팅 후 미실행
 - [ ] 업데이트: v1.0.1 테스트 릴리스 공개 → 기존 설치본이 감지·경고 없이 설치·버전 표시 갱신
+
+## 12. 웹 연동 브리지 + 설정 (추가분)
+- **브리지**: src/preload.js 가 contextBridge 로 `window.practicumDesktop` 노출 —
+  `version`(string) / `getSettings()` → `{autoLaunch, notifications}` /
+  `setAutoLaunch(enabled)`·`setNotifications(enabled)` → 적용 후 실제 상태(boolean) 반환.
+  IPC 채널: `pg:get-settings` / `pg:set-auto-launch` / `pg:set-notifications`.
+- **웹(v3) 쪽**: exe 감지 = `typeof window !== "undefined" && !!window.practicumDesktop`
+  (hydration 후 useEffect 판정 — SSR 불일치 방지). 앱설정 페이지가 이 브리지로 설정 토글.
+- **알림 끔**: store 의 `notificationsEnabled`(기본 true) — false 면 poller 가
+  서버 확인 자체를 건너뜀(재로그인 안내 포함 전부 중단).
+- **보안**: 자식 창(about:blank allow 분기)에는 overrideBrowserWindowOptions 로
+  preload 없는 webPreferences 명시 — 외부 페이지에 브리지 노출 금지.
+- **고정 파일명**: nsis.artifactName = `PracticumGuide-Setup.${ext}` →
+  다운로드 고정 주소 `…/releases/latest/download/PracticumGuide-Setup.exe`
+  (홈 화면 [앱 다운로드] 버튼이 이 주소 사용).
+- ⚠️ 브리지 규격 변경 시 v3 앱설정 페이지와 동시 변경(CLAUDE.md 절대 규칙).

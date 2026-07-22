@@ -7,10 +7,10 @@
 
 ## 1. 내려받기
 
-1. 아래 주소를 열어 주세요.
-   https://github.com/ironbro205/practicum-guide-desktop/releases/latest
-2. **PracticumGuide-Setup-1.0.0.exe** 파일을 눌러 내려받아 주세요.
-   (버전 숫자는 더 높을 수 있어요 — 항상 맨 위에 있는 exe 하나만 받으면 됩니다.)
+1. 아래 주소를 열면 **PracticumGuide-Setup.exe** 파일이 바로 내려받아져요.
+   (항상 최신 버전이 받아지는 고정 주소입니다.)
+   https://github.com/ironbro205/practicum-guide-desktop/releases/latest/download/PracticumGuide-Setup.exe
+2. 실습가이드 **홈 화면 오른쪽 아래 [앱 다운로드] 버튼**으로도 받을 수 있어요.
 
 ## 2. 파란 경고창이 떠도 정상이에요
 

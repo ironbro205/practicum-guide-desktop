@@ -8,6 +8,8 @@
  *      true 면 사용자가 껐어도 다시 강제 등록하지 않는다)
  *  - reloginNotified: boolean ("다시 로그인해 주세요" 알림을 이미 보냈는지 —
  *      로그인 복귀 시 false 로 리셋)
+ *  - notificationsEnabled: boolean (알림 켬/끔, 기본 true. false 면 폴링 주기가
+ *      서버 확인 자체를 건너뛴다 — 웹 앱설정 페이지에서 브리지로 변경)
  *
  * 파일 손상(JSON 파싱 실패 등) 시 기본값으로 초기화한다.
  */
@@ -22,6 +24,7 @@ const DEFAULTS = {
   lastNoticeMaxId: null,
   loginItemRegistered: false,
   reloginNotified: false,
+  notificationsEnabled: true,
 };
 
 let cache = null;

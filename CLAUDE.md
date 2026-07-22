@@ -15,9 +15,11 @@
 4. 채널 화면 경로는 `/channels?ch=<id>` (쿼리 방식). v3 에 /channels/[id] 페이지 없음.
 5. 자동실행은 첫 실행 1회만 등록(store 의 loginItemRegistered). 사용자가 끈 것을
    강제 재등록하지 않는다. get/setLoginItemSettings 는 항상 args:["--hidden"] 동일하게.
+6. 브리지(window.practicumDesktop) 규격 변경 시 v3 앱설정 페이지와 동시 변경.
 
 ## 구조
-- src/main.js — 메인 프로세스 전부(창·트레이·정책·자동실행·업데이트·폴링 시작)
+- src/main.js — 메인 프로세스 전부(창·트레이·정책·자동실행·업데이트·폴링 시작·브리지 IPC)
+- src/preload.js — 웹 연동 브리지(window.practicumDesktop, 최소 API만 노출)
 - src/poller.js — 새 글 감지(net.fetch + 401 시 쿠키 헤더 수동 구성 폴백)
 - src/store.js — userData/state.json 읽기/쓰기
 

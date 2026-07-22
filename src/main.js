@@ -15,6 +15,7 @@ const {
   Menu,
   shell,
   Notification,
+  ipcMain,
 } = require("electron");
 
 const APP_ID = "com.ironbro205.practicum-guide"; // build.appId 와 반드시 동일(토스트 AUMID)
@@ -68,6 +69,10 @@ if (!gotTheLock) {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
+        // 웹(v3) 연동 브리지 — window.practicumDesktop 노출(preload.js)
+        preload: path.join(__dirname, "preload.js"),
+        // 샌드박스 preload 에서 앱 버전을 읽을 수 있게 전달(package.json require 불가)
+        additionalArguments: [`--pg-app-version=${app.getVersion()}`],
         // 기본 세션 사용 — partition 지정 금지(로그인 쿠키 60일 유지)
       },
     });
@@ -137,7 +142,23 @@ if (!gotTheLock) {
   function setupWindowOpenPolicy(win) {
     win.webContents.setWindowOpenHandler(({ url }) => {
       if (url === "about:blank" || url === "") {
-        return { action: "allow" };
+        return {
+          action: "allow",
+          // ⚠️ Electron 문서상 about:blank 자식 창의 webPreferences 는 부모에서
+          // 통째로 복사되며 여기서 override 할 수 없다("no way to override it") —
+          // 즉 브리지 preload 는 자식 창에 상속된다. 아래 지정은 방어적 표기일 뿐
+          // 실제 차단이 아니며, 외부 페이지에 브리지가 노출되지 않는 실제 방어는
+          // did-create-window 의 guardExternal(will-navigate + will-redirect)이다:
+          // 외부 문서가 로드되기 전에 이동을 막고 창을 닫는다(preload 는 최상위
+          // 프레임에만 주입되므로 서브프레임 우회 경로도 없음).
+          overrideBrowserWindowOptions: {
+            webPreferences: {
+              preload: undefined,
+              nodeIntegration: false,
+              contextIsolation: true,
+            },
+          },
+        };
       }
       let origin = null;
       try {
@@ -156,6 +177,9 @@ if (!gotTheLock) {
     // about:blank 로 열린 자식 창: 같은 정책을 재귀 적용하고,
     // will-navigate 뿐 아니라 서버측 리다이렉트(will-redirect)도 감시해
     // 외부 도메인이면 기본 브라우저로 넘긴다.
+    // ★ 이 가드가 브리지 노출 방지의 실제 방어선이다 — about:blank 자식 창은
+    // 부모의 preload(브리지)를 그대로 상속하므로(위 overrideBrowserWindowOptions
+    // 주석 참고), 외부 문서가 로드되기 전에 여기서 차단·창 닫기로 막는다.
     win.webContents.on("did-create-window", (childWindow) => {
       setupWindowOpenPolicy(childWindow);
       const guardExternal = (event, url) => {
@@ -223,6 +247,34 @@ if (!gotTheLock) {
     store.set({ loginItemRegistered: true });
   }
 
+  // ── 웹(v3) 연동 브리지 IPC ───────────────────────────────────────────
+  // preload.js 의 window.practicumDesktop 이 invoke 하는 채널 3개.
+  // ⚠️ 브리지 규격 변경 시 v3 앱설정 페이지와 동시 변경(CLAUDE.md 절대 규칙).
+  function registerBridgeIpc() {
+    ipcMain.handle("pg:get-settings", () => ({
+      autoLaunch: getAutoLaunchEnabled(),
+      notifications: store.get().notificationsEnabled !== false,
+    }));
+
+    ipcMain.handle("pg:set-auto-launch", (_event, enabled) => {
+      setAutoLaunch(enabled === true);
+      rebuildTrayMenu(); // 트레이 체크박스 동기화
+      return getAutoLaunchEnabled(); // 적용 후 실제 상태 반환
+    });
+
+    ipcMain.handle("pg:set-notifications", async (_event, enabled) => {
+      const turningOn =
+        enabled === true && store.get().notificationsEnabled === false;
+      if (turningOn) {
+        // 켜기 전에 기준값을 조용히 최신화 — 꺼둔 사이 글이 뒤늦게 알림으로
+        // 튀지 않게 한다. 완료 후에 켜야 폴링 주기와의 경합도 없다.
+        await poller.refreshBaselines(BASE_URL);
+      }
+      store.set({ notificationsEnabled: enabled === true });
+      return store.get().notificationsEnabled !== false; // 적용 후 실제 상태 반환
+    });
+  }
+
   // ── 자동 업데이트 (electron-updater + GitHub Releases) ────────────────
   function initUpdater() {
     if (!app.isPackaged) return; // 개발 모드 가드
@@ -273,6 +325,7 @@ if (!gotTheLock) {
   }
 
   function rebuildTrayMenu() {
+    if (tray === null) return; // 트레이 생성 전 IPC 호출 대비
     const menu = Menu.buildFromTemplate([
       { label: "열기", click: showMainWindow },
       { label: `버전 v${app.getVersion()}`, enabled: false },
@@ -303,6 +356,7 @@ if (!gotTheLock) {
   app.whenReady().then(() => {
     Menu.setApplicationMenu(null); // 웹 래핑 앱 — 기본 메뉴바 제거
 
+    registerBridgeIpc();
     createWindow();
     createTray();
     registerLoginItemOnce();
