@@ -1,6 +1,6 @@
 {
   "name": "practicum-guide-desktop",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "실습가이드(practicum-guide.vercel.app) Windows 데스크톱 앱 — 트레이 상주 + 새 글 알림 + 자동 업데이트",
   "main": "src/main.js",
   "author": "ironbro205",

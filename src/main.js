@@ -36,7 +36,8 @@ const TITLEBAR_HEIGHT = 36;
 const BANNER_WIDTH = 360;
 const BANNER_HEIGHT = 100;
 const BANNER_MARGIN = 16; // 작업 영역 우하단 여백
-const BANNER_TIMEOUT_MS = 7 * 1000; // 자동 숨김
+// 배너는 시간이 지나도 자동으로 사라지지 않는다(사용자 확정, v1.0.4) —
+// 닫히는 경우는 ①× 클릭 ②본문 클릭(이동) ③앱 창을 열었을 때 뿐.
 
 // ── 단일 인스턴스 락 (파일 최상단) ─────────────────────────────────────
 const gotTheLock = app.requestSingleInstanceLock();
@@ -61,8 +62,6 @@ if (!gotTheLock) {
   let bannerWindow = null;
   /** @type {Promise<void>|null} 배너 html 로드 완료 대기용 */
   let bannerLoadPromise = null;
-  /** 배너 자동 숨김 타이머 (null = 표시 중 아님) */
-  let bannerHideTimer = null;
   /** 현재 표시 중인 배너의 클릭 동작 (null = 클릭해도 닫기만) */
   let bannerOnClick = null;
 
@@ -135,9 +134,12 @@ if (!gotTheLock) {
       }
     });
 
-    // 창을 열어 보면 새 알림 표시 해제("창을 열면 해제" 확정 설계)
+    // 창을 열어 보면 새 알림 표시 해제("창을 열면 해제" 확정 설계) —
+    // 트레이 깜빡임과 함께, 떠 있던 알림 배너도 닫는다(이미 확인한 셈이므로).
     mainWindow.on("focus", stopAlertBlink);
     mainWindow.on("show", stopAlertBlink);
+    mainWindow.on("focus", hideBanner);
+    mainWindow.on("show", hideBanner);
     // 숨김/최소화 후 낡은 화면 문제는 웹(v3)의 DesktopRefresher 가 해결한다 —
     // 창이 다시 보이면 데이터만 조용히 갱신(입력 보존). exe 쪽 통째 reload 는 제거(v1.0.3).
 
@@ -363,10 +365,6 @@ if (!gotTheLock) {
   }
 
   function hideBanner() {
-    if (bannerHideTimer !== null) {
-      clearTimeout(bannerHideTimer);
-      bannerHideTimer = null;
-    }
     bannerOnClick = null;
     if (bannerWindow !== null && !bannerWindow.isDestroyed()) {
       bannerWindow.hide();
@@ -375,8 +373,8 @@ if (!gotTheLock) {
 
   /**
    * 알림 배너 표시 — 앱의 모든 알림이 이 한 경로로 나간다.
-   * 표시 중 새 알림이 오면 내용 교체 + 타이머 리셋(최신 우선).
-   * 본문 클릭 = onClick 실행 + 즉시 숨김, × = 숨김만, 7초 후 자동 숨김.
+   * 표시 중 새 알림이 오면 내용 교체(최신 우선).
+   * 자동 숨김 없음 — 본문 클릭(onClick+숨김)·×·앱 창 열기로만 닫힌다.
    */
   async function showBanner(title, body, onClick) {
     try {
@@ -401,9 +399,6 @@ if (!gotTheLock) {
         height: BANNER_HEIGHT,
       });
       bannerWindow.showInactive(); // 포커스 안 뺏고 표시
-
-      if (bannerHideTimer !== null) clearTimeout(bannerHideTimer);
-      bannerHideTimer = setTimeout(hideBanner, BANNER_TIMEOUT_MS);
     } catch (_err) {
       /* 배너 실패로 앱이 죽지 않게 — 트레이 깜빡임이 보조 표시로 남는다 */
     }
