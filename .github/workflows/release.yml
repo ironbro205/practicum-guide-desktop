@@ -21,6 +21,17 @@ jobs:
 
       - run: npm ci
 
+      # 태그(vX.Y.Z)와 package.json version 불일치 시 빌드 전에 실패시킨다
+      - name: verify tag matches package.json version
+        shell: bash
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::tag v$TAG_VERSION != package.json $PKG_VERSION"
+            exit 1
+          fi
+
       # 태그 푸시 → 빌드 → GitHub Releases 에 setup.exe / latest.yml / .blockmap 게시
       # (publish.releaseType: "release" — draft 는 업데이터가 못 보므로 바로 공개)
       - run: npx electron-builder --win --publish always

@@ -87,11 +87,44 @@ if (!gotTheLock) {
     });
 
     setupWindowOpenPolicy(mainWindow);
+    attachMainNavGuard(mainWindow);
 
     // 다운로드(will-download)는 Electron 기본 저장 대화상자를 그대로 사용 —
     // 채널 첨부·hwpx 내보내기가 기본 동작으로 저장된다. 핸들러 등록 안 함.
 
     mainWindow.loadURL(BASE_URL);
+  }
+
+  /** 외부 브라우저 열기 — http/https 만 허용(그 외 프로토콜은 무시). */
+  function safeOpenExternal(url) {
+    try {
+      const protocol = new URL(url).protocol;
+      if (protocol === "https:" || protocol === "http:") shell.openExternal(url);
+    } catch (_err) {
+      /* 잘못된 URL — 무시 */
+    }
+  }
+
+  /**
+   * 메인 창 자체의 페이지 이동 제한 — 같은 창에서 외부 도메인으로 떠나는 것을 막고
+   * 기본 브라우저로 넘긴다(첨부는 전부 같은 도메인 /api/blob 중계라 영향 없음).
+   */
+  function attachMainNavGuard(win) {
+    const guard = (event, url) => {
+      let origin = null;
+      try {
+        origin = new URL(url).origin;
+      } catch (_err) {
+        event.preventDefault();
+        return;
+      }
+      if (origin !== OWN_ORIGIN) {
+        event.preventDefault();
+        safeOpenExternal(url);
+      }
+    };
+    win.webContents.on("will-navigate", guard);
+    win.webContents.on("will-redirect", guard);
   }
 
   /**
@@ -116,7 +149,7 @@ if (!gotTheLock) {
         win.loadURL(url);
         return { action: "deny" };
       }
-      shell.openExternal(url);
+      safeOpenExternal(url);
       return { action: "deny" };
     });
 
@@ -135,7 +168,7 @@ if (!gotTheLock) {
         }
         if (origin !== OWN_ORIGIN) {
           event.preventDefault();
-          shell.openExternal(url);
+          safeOpenExternal(url);
           if (!childWindow.isDestroyed()) childWindow.close();
         }
       };
