@@ -1,0 +1,44 @@
+{
+  "name": "practicum-guide-desktop",
+  "version": "1.0.0",
+  "description": "실습가이드(practicum-guide.vercel.app) Windows 데스크톱 앱 — 트레이 상주 + 새 글 알림 + 자동 업데이트",
+  "main": "src/main.js",
+  "author": "ironbro205",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "43.2.0",
+    "electron-builder": "26.15.7"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.9"
+  },
+  "build": {
+    "appId": "com.ironbro205.practicum-guide",
+    "productName": "실습가이드",
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "PracticumGuide-Setup-${version}.${ext}"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "ironbro205",
+      "repo": "practicum-guide-desktop",
+      "releaseType": "release"
+    }
+  }
+}
