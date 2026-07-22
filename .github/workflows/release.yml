@@ -32,6 +32,14 @@ jobs:
             exit 1
           fi
 
+      # 릴리스를 미리 생성 — electron-builder 의 자산별 병렬 업로드가 릴리스 생성을
+      # 경합하면 같은 태그에 릴리스가 2개 생기는 사고 방지(v1.0.0 에서 실제 발생)
+      - name: pre-create release
+        shell: bash
+        run: gh release create "$GITHUB_REF_NAME" --title "${GITHUB_REF_NAME#v}" --notes "" --repo "$GITHUB_REPOSITORY" || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       # 태그 푸시 → 빌드 → GitHub Releases 에 setup.exe / latest.yml / .blockmap 게시
       # (publish.releaseType: "release" — draft 는 업데이터가 못 보므로 바로 공개)
       - run: npx electron-builder --win --publish always

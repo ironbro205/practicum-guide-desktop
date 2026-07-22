@@ -15,7 +15,21 @@
 - INSTALL.md: 교사용 설치 안내(파란 경고 → 추가 정보 → 실행 포함).
 - 검증: npm install 성공, node --check src/*.js 통과. 실기동 QA 는 PLAN §11.
 
+## 2026-07-22 — 브리지·앱설정·릴리스까지 완료 (v1.0.0 공개됨)
+- Codex 1차 리뷰 반영: 메인 창 will-navigate/will-redirect 가드(자기 도메인만),
+  safeOpenExternal(http/https 만), release.yml 태그=version 검증 스텝.
+- 추가 기능(PLAN §12): src/preload.js 브리지(window.practicumDesktop),
+  IPC 3채널(pg:get-settings/set-auto-launch/set-notifications), notificationsEnabled,
+  알림 끔=폴링 전체 중단. Codex 2차 리뷰 반영: 알림 켤 때 refreshBaselines 선실행
+  (꺼둔 사이 글이 뒤늦게 알림으로 튀는 것 방지).
+- artifactName 버전 제거 → 고정 다운로드 주소
+  https://github.com/ironbro205/practicum-guide-desktop/releases/latest/download/PracticumGuide-Setup.exe
+- v3 배포 완료: /api/my/notices-activity(운영 401 확인), 홈 [앱 다운로드] 버튼,
+  사이드바 앱설정 탭(/app-settings, exe 전용) — v3 커밋 15c6940.
+- 릴리스: 공개 저장소 생성, v1.0.0 태그 → CI 성공. ⚠️사고 1건: 병렬 업로드 경합으로
+  같은 태그에 릴리스 2개 생성(blockmap 분리) → 수동 병합(자산 3종 확인).
+  재발 방지로 release.yml 에 pre-create release 스텝 추가.
+
 ## 남은 일
-- [ ] v3 에 GET /api/my/notices-activity 신설 + prod 배포 (PLAN §8 — v3 쪽 작업, 메인 담당)
-- [ ] GitHub 공개 저장소 생성·푸시 → v1.0.0 태그 → 릴리스 자산 3종 확인 (PLAN §7)
-- [ ] 사용자 실제 Windows PC 수동 QA (PLAN §11 체크리스트)
+- [ ] 사용자 실제 Windows PC 수동 QA (PLAN §11 체크리스트 + 앱설정 스위치 2개·다운로드 버튼 숨김)
+- [ ] QA 통과 후 INSTALL.md 링크를 교사들에게 안내
