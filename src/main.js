@@ -558,7 +558,7 @@ if (!gotTheLock) {
     registerLoginItemOnce();
     initUpdater();
 
-    // 새 글 알림 폴링(60초 간격, 통합 엔드포인트 1회 호출, 실행 중에만)
+    // 새 글 알림 폴링(10분 간격, 통합 엔드포인트 1회 호출, 실행 중에만)
     // 알림 = 자체 배너(showBanner 주입 — 윈도우 토스트 미사용),
     // 새 글 감지 시 배너와 함께 트레이 깜빡임·작업표시줄 flashFrame 시작
     poller.startPolling({

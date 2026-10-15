@@ -1,5 +1,5 @@
 /**
- * poller.js — 60초 간격 새 글 감지 (v1.0.1: 통합 폴링 엔드포인트 1회 호출).
+ * poller.js — 10분 간격 새 글 감지 (v1.0.1: 통합 폴링 엔드포인트 1회 호출).
  *
  * 매 주기 = GET /api/my/desktop-activity 단 1회:
  *   200 { ok:true, channels:[{id,last_post_at}], notices:{max_id,count} }
@@ -25,7 +25,7 @@
 const { net, session } = require("electron");
 const store = require("./store");
 
-const INTERVAL_MS = 60 * 1000; // 60초 (통합 엔드포인트 1회 — 서버 폴링 하한 60초 준수)
+const INTERVAL_MS = 10 * 60 * 1000; // 10분 (통합 엔드포인트 1회 — Vercel 무료 Active CPU 절약, 2026-10-15 사용자 결정)
 const ACTIVITY_PATH = "/api/my/desktop-activity";
 const RELOGIN_STREAK_THRESHOLD = 3;
 
@@ -251,7 +251,7 @@ async function runCycle() {
 function startPolling(options) {
   if (timer !== null) return;
   opts = options;
-  // 앱 시작 30초 후 첫 주기(세션 쿠키 로드 여유), 이후 60초 간격
+  // 앱 시작 30초 후 첫 주기(세션 쿠키 로드 여유), 이후 10분 간격
   initialTimer = setTimeout(runCycle, 30 * 1000);
   timer = setInterval(runCycle, INTERVAL_MS);
 }
